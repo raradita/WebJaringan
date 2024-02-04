@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
 
-  <title>Arsha Bootstrap Template - Index</title>
+  <title>Rara Skripsi</title>
   <meta content="" name="description">
   <meta content="" name="keywords">
 
@@ -24,6 +24,10 @@
   <link href="{{ url_for('static', filename='assets/vendor/glightbox/css/glightbox.min.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='assets/vendor/remixicon/remixicon.css') }}" rel="stylesheet">
   <link href="{{ url_for('static', filename='assets/vendor/swiper/swiper-bundle.min.css') }}" rel="stylesheet">
+
+  <!-- DataTables CSS -->
+  <link href="https://cdn.datatables.net/1.10.25/css/jquery.dataTables.min.css" rel="stylesheet">
+  <link href="https://cdn.datatables.net/1.10.25/css/dataTables.bootstrap4.min.css" rel="stylesheet">
 
   <!-- Template Main CSS File -->
   <link href="{{ url_for('static', filename='assets/css/style.css') }}" rel="stylesheet">
@@ -77,7 +81,7 @@
             Universitas Negeri Semarang<br>
           </h2>
           <div class="d-flex justify-content-center justify-content-lg-start">
-            <a href="/predict" class="btn-get-started scrollto">Mulai Klasifikasi</a>
+            <a href="#services" class="btn-get-started scrollto">Mulai Klasifikasi</a>
           </div>
         </div>
         <div class="col-lg-6 order-1 order-lg-2 hero-img" data-aos="zoom-in" data-aos-delay="200">
@@ -187,23 +191,26 @@
           <p>Magnam dolores commodi suscipit. Necessitatibus eius consequatur ex aliquid fuga eum quidem. Sit sint consectetur velit. Quisquam quos quisquam cupiditate. Et nemo qui impedit suscipit alias ea. Quia fugiat sit in iste officiis commodi quidem hic quas.</p>
         </div>
 
-         <!-- ======= Input Dataset ======= -->
-        <footer id="footer">
-
-          <div class="footer-newsletter">
-            <div class="container">
-              <div class="row justify-content-center">
-                <div class="col-lg-6">
-                  <h4>Input Dataset Testing</h4>
-                  <form action="#" method="post" enctype="multipart/form-data">
-                    <input type="file" name="dataset" id="dataset" accept=".csv, .xls, .xlsx" required>
-                    <input type="submit" value="Upload">
-                  </form>
-                </div>
+        <!-- ======= Input Dataset ======= -->
+        <div class="input-testing">
+          <div class="container">
+            <div class="row justify-content-center">
+              <div class="col-lg-6">
+                <h4>Input Dataset Testing</h4>
+                <form id="uploadForm" method="post" enctype="multipart/form-data">
+                  <input type="file" name="dataset" id="dataset" accept=".csv, .xls, .xlsx" required>
+                  <input type="submit" value="Upload">
+                </form>
               </div>
             </div>
           </div>
-        <div class="row">
+        </div>
+        <!-- Loading Element -->
+        <div id="loading" class="text-center" style="display: none;">Loading...</div>
+        <!-- Hasil Testing -->
+        <table id="data-table" class="display"></table>
+
+        <!-- <div class="row">
           <div class="col-xl-3 col-md-6 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
             <div class="icon-box">
               <div class="icon"><i class="bx bxl-dribbble"></i></div>
@@ -236,7 +243,7 @@
             </div>
           </div>
 
-        </div>
+        </div> -->
 
       </div>
     </section><!-- End Services Section -->
@@ -417,6 +424,10 @@
   <div id="preloader"></div>
   <a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
 
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- DataTables -->
+<script src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.min.js"></script>
 <!-- Vendor JS Files -->
 <script src="{{ url_for('static', filename='assets/vendor/aos/aos.js') }}"></script>
 <script src="{{ url_for('static', filename='assets/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
@@ -429,6 +440,92 @@
 <!-- Template Main JS File -->
 <script src="{{ url_for('static', filename='assets/js/main.js') }}"></script>
 
+<script>
+  $(document).ready(function () {
+      // Event listener untuk uploadForm
+      $("#uploadForm").submit(function (e) {
+          e.preventDefault();
+
+          var formData = new FormData(this);
+          var fileInput = document.getElementById('dataset');
+          var file = fileInput.files[0];
+          formData.append('file', file);
+
+          // Tampilkan elemen loading
+          $("#loading").show();
+
+          $.ajax({
+              url: "/predict",
+              type: "POST",
+              data: formData,
+              processData: false,
+              contentType: false,
+              success: function (response) {
+                // Sembunyikan elemen loading
+                $("#loading").hide();
+                
+                // Tampilkan hasil di tabel
+                displayResult(response);
+              },
+              error: function (error) {
+                console.log("Error:", error);
+
+                // Sembunyikan elemen loading pada error
+                $("#loading").hide();
+              }
+          });
+      });
+
+      // Inisialisasi DataTable
+      function displayResult(data) {
+          // tabel dengan ID data-table
+          $('#data-table').DataTable({
+              destroy: true,
+              data: data,
+              columns: [
+                { "data": "protocol_type", "title": "Protocol Type" },
+                { "data": "flag", "title": "Flag" },
+                { "data": "wrong_fragment", "title": "Wrong Fragment" },
+                { "data": "hot", "title": "Hot" },
+                { "data": "num_compromised", "title": "Num Compromised" },
+                { 
+                  "data": null, "title": "..."
+                },
+                { "data": "labels", "title": "Labels" },
+                { "data": "prediksi", "title": "Prediksi" }
+              ],
+              pageLength: 10,
+              pagingType: "simple_numbers",
+              ordering: false,
+              createdRow: function (row, data, dataIndex) {
+                // Mengganti seluruh sel pada baris kecuali kolom yang tetap ditampilkan
+                var cells = $('td', row);
+                for (var i = 5; i < cells.length - 2; i++) {
+                    $(cells[i]).html('...');
+                }
+              },
+              columnDefs: [
+                {
+                  targets: [2,3,4],
+                  render: function (data, type, row, meta) {
+                      // Batasi angka menjadi 4 digit di belakang koma
+                      return type === 'display' ? parseFloat(data).toFixed(4) : data;
+                  }
+                }
+              ],
+              language: {
+                  info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ entri",
+                  paginate: {
+                      first: "Pertama",
+                      last: "Terakhir",
+                      next: "Selanjutnya",
+                      previous: "Sebelumnya",
+                  },
+              },
+          });
+      }
+  });
+</script>
 
 </body>
 

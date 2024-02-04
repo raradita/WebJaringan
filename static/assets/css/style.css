@@ -883,6 +883,69 @@ section {
   color: #47b2e4;
 }
 
+.services .input-testing {
+  padding: 50px 0;
+  background: #f3f5fa;
+  text-align: center;
+  font-size: 15px;
+  color: #444444;
+}
+
+.services .input-testing h4 {
+  font-size: 24px;
+  margin: 0 0 20px 0;
+  padding: 0;
+  line-height: 1;
+  font-weight: 600;
+  color: #37517e;
+}
+
+.services .input-testing form {
+  margin-top: 30px;
+  background: #fff;
+  padding: 6px 10px;
+  position: relative;
+  border-radius: 50px;
+  box-shadow: 0px 2px 15px rgba(0, 0, 0, 0.06);
+  text-align: left;
+}
+
+.services .input-testing form input[type=file] {
+  border: 0;
+  padding: 4px 8px;
+  width: calc(100% - 100px);
+}
+
+.services .input-testing form input[type=submit] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  border: 0;
+  background: none;
+  font-size: 16px;
+  padding: 0 20px;
+  background: #47b2e4;
+  color: #fff;
+  transition: 0.3s;
+  border-radius: 50px;
+  box-shadow: 0px 2px 15px rgba(0, 0, 0, 0.1);
+}
+
+.services .input-testing form input[type=submit]:hover {
+  background: #209dd8;
+}
+
+/* Tabel */
+th, td {
+  border: 1px solid #dddddd;
+  text-align: left;
+}
+
+th {
+  background-color: #47b2e4;
+}
+
 /*--------------------------------------------------------------
 # Cta
 --------------------------------------------------------------*/

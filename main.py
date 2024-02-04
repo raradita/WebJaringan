@@ -1,23 +1,21 @@
 from flask import Flask, render_template, request, jsonify
-from joblib import load  # Jika Anda menggunakan joblib untuk menyimpan model
 import joblib
-import numpy as np
-# import pandas as pd
-import lightgbm
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 import sys
 
 print(sys.executable)
 
 app = Flask(__name__)
 
+# Load the machine learning model
+scaler = joblib.load("./models/scaler_model.joblib")
+rfe = joblib.load("./models/rfe_model.joblib")
+model = joblib.load("./models/best_model.joblib")
+
 @app.route('/')
 def home():
     return render_template('index.html')
-    
-
-# Load the machine learning model
-model_path = "./models/best_model.joblib"
-model = joblib.load(model_path)
 
 # Define a route for predictions
 @app.route('/predict', methods=['POST'])
@@ -38,24 +36,62 @@ def predict():
         # Read the CSV file
         df = pd.read_csv(file)
 
-        # Assuming the features are all columns except the target variable
-        features = df.drop(columns=['target_variable'])
+        # Fungsi mengubah jenis serangan pada label kedalam kategori anomali
+        def change_labels(data):
+          data.labels.replace(['apache2','back','land','neptune','mailbomb','pod','processtable','smurf','teardrop','udpstorm','worm'],'anomali',inplace=True)
+          data.labels.replace(['ftp_write','guess_passwd','httptunnel','imap','multihop','named','phf','sendmail','snmpgetattack','snmpguess','spy','warezclient','warezmaster','xlock','xsnoop'],'anomali',inplace=True)
+          data.labels.replace(['ipsweep','mscan','nmap','portsweep','saint','satan'],'anomali',inplace=True)
+          data.labels.replace(['buffer_overflow','loadmodule','perl','ps','rootkit','sqlattack','xterm'],'anomali',inplace=True)
+        
+        change_labels(df)
 
-        # Print debug information about the features
-        print('Debug Info: Features shape -', features.shape)
-        print('Debug Info: Features columns -', features.columns)
+        # Label Encoder
+        # 'labels'
+        le_labels = LabelEncoder()
+        df['labels'] = le_labels.fit_transform(df['labels'])
+        # 'protocol_type'
+        le_protocol_type = LabelEncoder()
+        df['protocol_type'] = le_protocol_type.fit_transform(df['protocol_type'])
+        # 'service'
+        le_service = LabelEncoder()
+        df['service'] = le_service.fit_transform(df['service'])
+        # 'flag'
+        le_flag = LabelEncoder()
+        df['flag'] = le_flag.fit_transform(df['flag'])
 
+        # Buat DataFrame baru tanpa kolom 'labels'
+        df_new = df.drop(['labels'], axis=1)
+        
         # Make predictions
-        predictions = model.predict(features)
+        new_data_scaled = scaler.transform(df_new)
+        new_data_rfe = rfe.transform(new_data_scaled)
+        prediction = model.predict(new_data_rfe)
 
-        # Add predictions to the DataFrame
-        df['prediction'] = predictions.tolist()
+        # Misalnya, new_data_rfe adalah hasil transformasi menggunakan RFE pada data yang telah discaler
+        df_new_rfe = pd.DataFrame(new_data_rfe, columns=df_new.columns[rfe.support_])
+        # Menambahkan kolom 'labels' asli ke dalam DataFrame df_new_rfe
+        df_new_rfe['labels'] = df['labels']
+        # Menambahkan hasil prediksi ke dalam DataFrame df_new_rfe
+        df_new_rfe['prediksi'] = prediction
 
-        # Print debug information about predictions
-        print('Debug Info: Predictions -', df['prediction'].tolist())
+        # Membuat fungsi untuk konversi nilai prediksi menjadi string
+        def convert_to_class(prediction):
+            return 'anomali' if prediction == 0 else 'normal'
+        df_new_rfe['prediksi'] = [convert_to_class(pred) for pred in prediction]
 
-        # Return the DataFrame as JSON
-        return df.to_json(orient='records')
+        # Mengembalikan nilai ke bentuk awal
+        df_new_rfe['labels'] = le_labels.inverse_transform(df['labels'])
+        df_new_rfe['protocol_type'] = le_protocol_type.inverse_transform(df['protocol_type'])
+        df_new_rfe['flag'] = le_flag.inverse_transform(df['flag'])
+
+        # Mengonversi DataFrame ke dalam bentuk array
+        array_data = df_new_rfe.to_numpy()
+
+        # List dengan nama kolom
+        result_list = [dict(zip(df_new_rfe.columns, row)) for row in array_data]
+
+        # Response
+        return jsonify(result_list)
 
     except Exception as e:
         print('Debug Info: Exception -', str(e))
